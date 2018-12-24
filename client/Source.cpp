@@ -1,53 +1,41 @@
-﻿#define _WINSOCK_DEPRECATED_NO_WARNINGS
+﻿#include <stdio.h>
+#include <stdlib.h>
 #include <WinSock2.h>
-#include <stdio.h>
+#include <Ws2tcpip.h>
 
-#pragma comment(lib, "ws2_32.lib")
 
-void main()
-{
-	//加载套接字
+#pragma comment(lib, "ws2_32.lib")  //加载 ws2_32.dll
+
+int main() {
+	//初始化DLL
 	WSADATA wsaData;
-	char buff[1024];
-	memset(buff, 0, sizeof(buff));
-
-	if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0)
-	{
-		printf("Failed to load Winsock");
-		return;
-	}
-
-	SOCKADDR_IN addrSrv;
-	addrSrv.sin_family = AF_INET;
-	addrSrv.sin_port = htons(8080);
-	addrSrv.sin_addr.S_un.S_addr = inet_addr("127.0.0.1");
+	WSAStartup(MAKEWORD(2, 2), &wsaData);
 
 	//创建套接字
-	SOCKET sockClient = socket(AF_INET, SOCK_STREAM, 0);
-	if (SOCKET_ERROR == sockClient) {
-		printf("Socket() error:%d", WSAGetLastError());
-		return;
-	}
+	SOCKET sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
 
-	//向服务器发出连接请求
-	if (connect(sockClient, (struct  sockaddr*)&addrSrv, sizeof(addrSrv)) == INVALID_SOCKET) {
-		printf("Connect failed:%d", WSAGetLastError());
-		return;
-	}
-	else
-	{
-		//接收数据
-		recv(sockClient, buff, sizeof(buff), 0);
-		printf("%s\n", buff);
-	}
+	//向服务器发起请求
+	sockaddr_in sockAddr;
+	memset(&sockAddr, 0, sizeof(sockAddr));  //每个字节都用0填充
+	sockAddr.sin_family = PF_INET;
+	inet_pton(PF_INET, "127.0.0.1", &sockAddr.sin_addr);
+	sockAddr.sin_port = htons(1234);
+	connect(sock, (SOCKADDR*)&sockAddr, sizeof(SOCKADDR));
 
 	//发送数据
-	const char *buffSend = "hello, this is a Client....";
-	send(sockClient, buffSend, strlen(buffSend) + 1, 0);
-	printf("%d", strlen(buffSend) + 1);
+	const char *buffer = "Hello world!";
+	send(sock, buffer, strlen(buffer)+sizeof(char), NULL);
+	char buf[100] = { 0 };
+	recv(sock, buf, 100, NULL);
+	printf("%s\n", buf);
+
 
 	//关闭套接字
-	closesocket(sockClient);
+	closesocket(sock);
+
+	//终止使用 DLL
 	WSACleanup();
+
 	system("pause");
+	return 0;
 }
